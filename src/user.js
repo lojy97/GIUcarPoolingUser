@@ -1,8 +1,9 @@
-const { ApolloServer, gql } = require('apollo-server');
-const { PrismaClient } = require('@prisma/client');
+import { gql } from 'apollo-server-express';
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
-
-
+import { fetchRole, fetchId, checkAuth }from '../auth.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 const typeDefs = gql`
   enum Role {
     ADMIN
@@ -29,7 +30,9 @@ const typeDefs = gql`
     users: [User!]!
     user(id: ID!): User
   }
-
+ type LoginResponse {
+    token: String!
+  }
   type Mutation {
     createUser(
       name: String!
@@ -39,29 +42,67 @@ const typeDefs = gql`
       phoneNumber: String
       role: Role
     ): User!
+    login(email: String!, password: String!): LoginResponse!
   }
 `;
 
-// Resolvers
 const resolvers = {
+  //find users
   Query: {
-    users: () => prisma.user.findMany(),
-    user: (_, { id }) => prisma.user.findUnique({ where: { id } }),
-  },
-  Mutation: {
-    createUser: async (_, args) => {
-      return await prisma.user.create({
-        data: {
-          ...args,
-        },
-      });
+    users: async (_, __, { role }) => {
+      if (!checkAuth(["ADMIN"], role)) {
+        throw new Error("Unauthorized");
+      }
+      return await prisma.user.findMany();
+    },
+    //find user by id
+    user: async (_, { id }, { role }) => {
+      if (!checkAuth(["ADMIN"], role)) {
+        throw new Error("Unauthorized");
+      }
+      return await prisma.user.findUnique({ where: { id } });
     },
   },
+  Mutation: {
+    //create user
+    createUser: async (_, args, { role }) => {
+      if (!checkAuth(["ADMIN"], role)) {
+        console.log("Role: ", role);
+        console.log("Roles Authorized: ", ["ADMIN"]);
+        console.log(checkAuth(["ADMIN"], role));
+        throw new Error("Unauthorized");
+      }
+      const hashedPassword = await bcrypt.hash(args.password, 10);
+      const user =await prisma.user.create({
+        data: {
+          ...args,
+          password: hashedPassword,
+        },
+      });
+      return user;
+    },
+    //login user
+    login:async(_, { email, password }) => {
+     
+      const user= await prisma.user.findUnique({ where: { email } });
+      console.log(user);
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        throw new Error("Invalid credentials");
+      }
+      const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET_KEY, {
+        expiresIn: '1h',
+      });
+      return { token , role: user.role };
+    },
+  },
+
+  
 };
 
-// Start server
-const server = new ApolloServer({ typeDefs, resolvers });
-
-server.listen().then(({ url }) => {
-  console.log(`🚀 Server ready at ${url}`);
-});
+export const userTypeDefs = typeDefs;
+export const userResolvers = resolvers;
