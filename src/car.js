@@ -36,7 +36,7 @@ const resolvers = {
   Query: {
     // Find all cars (only ADMIN)
     cars: async (_, __, { role }) => {
-      if (!checkAuth(['ADMIN'], role)) {
+      if (!checkAuth(['admin'], role)) {
         throw new Error('Unauthorized');
       }
       return await prisma.car.findMany();
@@ -45,7 +45,7 @@ const resolvers = {
   Mutation: {
     // Create a car (only ADMIN)
     createCar: async (_, args, { role }) => {
-      if (!checkAuth(['ADMIN'], role)) {
+      if (!checkAuth(['admin'], role)) {
         throw new Error('Unauthorized');
       }
       const newCar = await prisma.car.create({
@@ -56,7 +56,7 @@ const resolvers = {
 
     // Update a car (only ADMIN)
     updateCar: async (_, { id, ...data }, { role }) => {
-      if (!checkAuth(['ADMIN'], role)) {
+      if (!checkAuth(['admin'], role)) {
         throw new Error('Unauthorized');
       }
 

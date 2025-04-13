@@ -6,9 +6,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 const typeDefs = gql`
   enum Role {
-    ADMIN
-    DRIVER
-    PASSENGER
+    admin
+    driver
+    student
   }
 
   type User {
@@ -65,14 +65,14 @@ const resolvers = {
   //find users
   Query: {
     users: async (_, __, { role }) => {
-      if (!checkAuth(["ADMIN"], role)) {
+      if (!checkAuth(["admin"], role)) {
         throw new Error("Unauthorized");
       }
       return await prisma.user.findMany();
     },
     //find user by id
     user: async (_, { id }, { role }) => {
-      if (!checkAuth(["ADMIN"], role)) {
+      if (!checkAuth(["admin"], role)) {
         throw new Error("Unauthorized");
       }
       return await prisma.user.findUnique({ where: { id } });
@@ -81,7 +81,7 @@ const resolvers = {
   Mutation: {
     //create user
     createUser: async (_, args, { role }) => {
-      if (!checkAuth(["ADMIN"], role)) {
+      if (!checkAuth(["admin"], role)) {
         console.log("Role: ", role);
         console.log("Roles Authorized: ", ["ADMIN"]);
         console.log(checkAuth(["ADMIN"], role));
@@ -116,7 +116,7 @@ const resolvers = {
     },
     //update user
     updateUser: async (_, { id, ...data }, { role }) => {
-      if (!checkAuth(["ADMIN"], role)) {
+      if (!checkAuth(["admin"], role)) {
         throw new Error("Unauthorized");
       }
     
@@ -133,7 +133,7 @@ const resolvers = {
     },
     //delete user
     deleteUser: async (_, { id }, { role }) => {
-      if (!checkAuth(["ADMIN"], role)) {
+      if (!checkAuth(["admin"], role)) {
         throw new Error("Unauthorized");
       }
     

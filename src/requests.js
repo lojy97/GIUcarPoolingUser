@@ -91,14 +91,14 @@ const resolvers = {
 
   Query: {
     requests: async (_, __, { role }) => {
-      if (!checkAuth(['ADMIN'], role)) {
+      if (!checkAuth(['admin'], role)) {
         throw new Error('Unauthorized');
       }
       return await prisma.request.findMany();
     },
 
     request: async (_, { id }, { role }) => {
-      if (!checkAuth(['ADMIN', 'DRIVER', 'PASSENGER'], role)) {
+      if (!checkAuth(['admin', 'driver', 'student'], role)) {
         throw new Error('Unauthorized');
       }
       return await prisma.request.findUnique({ where: { id } });
@@ -127,7 +127,7 @@ const resolvers = {
     },
 
     updateRequest: async (_, { id, ...data }, { role }) => {
-      if (!checkAuth(['ADMIN'], role)) {
+      if (!checkAuth(['admin'], role)) {
         throw new Error('Unauthorized');
       }
       try {
@@ -142,7 +142,7 @@ const resolvers = {
     },
 
     deleteRequest: async (_, { id }, { role }) => {
-      if (!checkAuth(['ADMIN'], role)) {
+      if (!checkAuth(['admin'], role)) {
         throw new Error('Unauthorized');
       }
       try {
