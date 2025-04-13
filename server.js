@@ -3,9 +3,16 @@ import express from 'express';
 import cookie from 'cookie';
 import cors from 'cors';
 import { requestTypeDefs, requestResolvers } from './src/requests.js';
+import { carTypeDefs, carResolvers } from './src/car.js';
 import { fetchRole, fetchId } from './auth.js';
 import { userTypeDefs, userResolvers } from './src/user.js';
 import { mergeTypeDefs, mergeResolvers } from '@graphql-tools/merge';
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { createWriteStream } from 'fs';
+
+import { graphqlUploadExpress } from "graphql-upload";
 
 import dotenv from 'dotenv';
 dotenv.config();
@@ -33,7 +40,7 @@ dotenv.config();
         res.cookie('myCookie', 'cookieValue', {
           httpOnly: true,
           expires: new Date(Date.now() + 900000),
-          secure: process.env.NODE_ENV === 'production', // Set to true if using HTTPS
+          secure: process.env.NODE_ENV === 'production', 
            sameSite: 'None'
         });
 
@@ -48,9 +55,9 @@ dotenv.config();
     Mutation: {},
   };
 
-  // Merge all typeDefs and resolvers
-  const typeDefs = mergeTypeDefs([rootTypeDefs, userTypeDefs,  requestTypeDefs]);
-  const resolvers = mergeResolvers([rootResolvers, userResolvers, requestResolvers]);
+
+  const typeDefs = mergeTypeDefs([rootTypeDefs, userTypeDefs,  requestTypeDefs,  carTypeDefs,]);
+  const resolvers = mergeResolvers([rootResolvers, userResolvers, requestResolvers, carResolvers]);
 
   const app = express();
 
@@ -59,6 +66,10 @@ dotenv.config();
     credentials: true,
   };
   app.use(cors(corsOptions));
+  app.use(graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 10 }));
+
+  // Serve static files for uploaded images
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")))
 
   const server = new ApolloServer({
     typeDefs,

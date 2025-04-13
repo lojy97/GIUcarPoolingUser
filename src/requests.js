@@ -2,8 +2,14 @@ import { gql } from 'apollo-server-express';
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 import { checkAuth } from '../auth.js';
+import { GraphQLUpload } from 'graphql-upload';
+import * as fs from 'fs';
+import * as path from 'path';
+import { createWriteStream } from 'fs';
 
 const typeDefs = gql`
+  scalar Upload
+
   enum RequestType {
     STUDENT
     DRIVER
@@ -23,6 +29,7 @@ const typeDefs = gql`
     status: RequestStatus!
     createdAt: String!
     reviewedAt: String
+    licenseURL: String
   }
 
   type Query {
@@ -35,6 +42,7 @@ const typeDefs = gql`
       studentId: String!
       universityId: String!
       requestType: RequestType!
+      file: Upload
     ): Request!
 
     updateRequest(
@@ -47,9 +55,41 @@ const typeDefs = gql`
   }
 `;
 
+async function saveUploadedFile(file) {
+  // Ensure file contains the expected properties (createReadStream, filename, mimetype)
+  const { createReadStream, filename, mimetype } = await file;
+
+  // Define the upload directory path
+  const uploadDir = path.join(process.cwd(), 'uploads', 'licenses');
+
+  // Create the upload directory if it doesn't exist
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  // Generate a unique filename to avoid collisions
+  const uniqueFilename = `${Date.now()}-${filename}`;
+  const filePath = path.join(uploadDir, uniqueFilename);
+  const fileUrl = `/uploads/licenses/${uniqueFilename}`;
+
+  // Create a write stream to save the file on the server
+  const writeStream = createWriteStream(filePath);
+
+  // Create a read stream from the uploaded file
+  const stream = createReadStream();
+
+  // Pipe the file data to the server
+  await new Promise((resolve, reject) => {
+    stream.pipe(writeStream).on('finish', resolve).on('error', reject);
+  });
+
+  return fileUrl;
+}
+
 const resolvers = {
+  Upload: GraphQLUpload, // Enable handling of file uploads
+
   Query: {
-    // ADMIN only
     requests: async (_, __, { role }) => {
       if (!checkAuth(['ADMIN'], role)) {
         throw new Error('Unauthorized');
@@ -57,7 +97,6 @@ const resolvers = {
       return await prisma.request.findMany();
     },
 
-    // All roles
     request: async (_, { id }, { role }) => {
       if (!checkAuth(['ADMIN', 'DRIVER', 'PASSENGER'], role)) {
         throw new Error('Unauthorized');
@@ -67,20 +106,26 @@ const resolvers = {
   },
 
   Mutation: {
-    // All roles
     createRequest: async (_, args, { role }) => {
-      if (!checkAuth(['ADMIN', 'DRIVER', 'PASSENGER'], role)) {
-        throw new Error('Unauthorized');
+      // Destructure file and other arguments
+      const { file, ...restData } = args;
+
+      const updateData = {
+        ...restData,
+        status: 'PENDING',
+      };
+
+      // If a file is uploaded, process and store the file URL
+      if (file) {
+        updateData.licenseURL = await saveUploadedFile(file);
       }
+
+      // Create the request in the database
       return await prisma.request.create({
-        data: {
-          ...args,
-          status: 'PENDING',
-        },
+        data: updateData,
       });
     },
 
-    // ADMIN only
     updateRequest: async (_, { id, ...data }, { role }) => {
       if (!checkAuth(['ADMIN'], role)) {
         throw new Error('Unauthorized');
@@ -96,7 +141,6 @@ const resolvers = {
       }
     },
 
-    // ADMIN only
     deleteRequest: async (_, { id }, { role }) => {
       if (!checkAuth(['ADMIN'], role)) {
         throw new Error('Unauthorized');
