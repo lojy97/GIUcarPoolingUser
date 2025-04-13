@@ -2,6 +2,7 @@ import { ApolloServer, gql } from 'apollo-server-express';
 import express from 'express';
 import cookie from 'cookie';
 import cors from 'cors';
+import { requestTypeDefs, requestResolvers } from './src/requests.js';
 import { fetchRole, fetchId } from './auth.js';
 import { userTypeDefs, userResolvers } from './src/user.js';
 import { mergeTypeDefs, mergeResolvers } from '@graphql-tools/merge';
@@ -32,7 +33,8 @@ dotenv.config();
         res.cookie('myCookie', 'cookieValue', {
           httpOnly: true,
           expires: new Date(Date.now() + 900000),
-          secure: false, // Set to true if using HTTPS
+          secure: process.env.NODE_ENV === 'production', // Set to true if using HTTPS
+           sameSite: 'None'
         });
 
         const cookies = cookie.parse(req.headers.cookie || '');
@@ -47,8 +49,8 @@ dotenv.config();
   };
 
   // Merge all typeDefs and resolvers
-  const typeDefs = mergeTypeDefs([rootTypeDefs, userTypeDefs]);
-  const resolvers = mergeResolvers([rootResolvers, userResolvers]);
+  const typeDefs = mergeTypeDefs([rootTypeDefs, userTypeDefs,  requestTypeDefs]);
+  const resolvers = mergeResolvers([rootResolvers, userResolvers, requestResolvers]);
 
   const app = express();
 

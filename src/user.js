@@ -43,7 +43,22 @@ const typeDefs = gql`
       role: Role
     ): User!
     login(email: String!, password: String!): LoginResponse!
+    updateUser(
+  id: ID!
+  name: String
+  email: String
+  universityId: String
+  phoneNumber: String
+  role: Role
+  isEmailVerified: Boolean
+  isPhoneVerified: Boolean
+  isDriverApproved: Boolean
+  isStudentApproved: Boolean
+): User!
+deleteUser(id: ID!): Boolean!
+
   }
+
 `;
 
 const resolvers = {
@@ -99,6 +114,42 @@ const resolvers = {
       });
       return { token , role: user.role };
     },
+    //update user
+    updateUser: async (_, { id, ...data }, { role }) => {
+      if (!checkAuth(["ADMIN"], role)) {
+        throw new Error("Unauthorized");
+      }
+    
+      try {
+        const updatedUser = await prisma.user.update({
+          where: { id },
+          data,
+        });
+        return updatedUser;
+      } catch (error) {
+        console.error("Update failed:", error);
+        throw new Error("Failed to update user");
+      }
+    },
+    //delete user
+    deleteUser: async (_, { id }, { role }) => {
+      if (!checkAuth(["ADMIN"], role)) {
+        throw new Error("Unauthorized");
+      }
+    
+      try {
+        await prisma.user.delete({
+          where: { id },
+        });
+        return true;
+      } catch (error) {
+        console.error("Delete failed:", error);
+        return false;
+      }
+    },
+    
+    
+    
   },
 
   
@@ -106,3 +157,4 @@ const resolvers = {
 
 export const userTypeDefs = typeDefs;
 export const userResolvers = resolvers;
+
