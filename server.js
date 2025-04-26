@@ -7,6 +7,7 @@ import { carTypeDefs, carResolvers } from './src/car.js';
 import { fetchRole, fetchId } from './auth.js';
 import { userTypeDefs, userResolvers } from './src/user.js';
 import { mergeTypeDefs, mergeResolvers } from '@graphql-tools/merge';
+import { complaintTypeDefs, complaintResolvers } from './src/complaint.js';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -56,8 +57,8 @@ dotenv.config();
   };
 
 
-  const typeDefs = mergeTypeDefs([rootTypeDefs, userTypeDefs,  requestTypeDefs,  carTypeDefs,]);
-  const resolvers = mergeResolvers([rootResolvers, userResolvers, requestResolvers, carResolvers]);
+  const typeDefs = mergeTypeDefs([rootTypeDefs, userTypeDefs,  requestTypeDefs,  carTypeDefs,complaintTypeDefs]);
+  const resolvers = mergeResolvers([rootResolvers, userResolvers, requestResolvers, carResolvers, complaintResolvers]);
 
   const app = express();
 

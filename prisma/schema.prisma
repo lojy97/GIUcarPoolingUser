@@ -8,21 +8,22 @@ datasource db {
 }
 
 model User {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   name              String
-  email             String   @unique
-  universityId      String   @unique
+  email             String    @unique
+  universityId      String    @unique
   password          String
   phoneNumber       String
-  isEmailVerified   Boolean  @default(false)
-  isPhoneVerified   Boolean  @default(false)
-  role              Role     @default(PASSENGER)
-  isDriverApproved  Boolean  @default(false)
-  isStudentApproved Boolean  @default(false)
-  createdAt         DateTime @default(now())
+  isEmailVerified   Boolean   @default(false)
+  isPhoneVerified   Boolean   @default(false)
+  role              Role      @default(student)
+  isDriverApproved  Boolean   @default(false)
+  isStudentApproved Boolean   @default(false)
+  createdAt         DateTime  @default(now())
   updatedAt         DateTime? @updatedAt
-  licenseNumber     String?  @unique
-  licenseURL        String?  
+  licenseNumber     String?   @unique
+  licenseURL        String?
+
   @@index([email])
 }
 
@@ -34,22 +35,32 @@ model Request {
   status       RequestStatus @default(PENDING)
   createdAt    DateTime      @default(now())
   reviewedAt   DateTime?
-  carModel  String?
-  carModelYear  String?
-  seats         Int?
+  carModel     String?
+  carModelYear String?
+  seats        Int?
+  licenseURL   String?
 
-    licenseURL   String? 
   @@index([status])
 }
 
 model Car {
-  id           String        @id @default(uuid())
-  DriverId    String
-  carModel  String
-  carModelYear  String
-  seats         Int
-  
+  id           String @id @default(uuid())
+  DriverId     String
+  carModel     String
+  carModelYear String
+  seats        Int
 }
+ 
+model Complaint {
+  id          String   @id @default(uuid())
+  senderId    String
+  receiverId  String
+  description String
+  createdAt   DateTime @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
+} 
 
 enum Role {
   admin
